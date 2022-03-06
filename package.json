@@ -1,0 +1,23 @@
+{
+  "name": "sqlish-formatter",
+  "version": "0.0.1",
+  "description": "A sql-ish formatter",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rickbergfalk/sqlish-formatter.git"
+  },
+  "keywords": [
+    "sql",
+    "formatter"
+  ],
+  "author": "Rick Bergfalk",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/rickbergfalk/sqlish-formatter/issues"
+  },
+  "homepage": "https://github.com/rickbergfalk/sqlish-formatter#readme"
+}
