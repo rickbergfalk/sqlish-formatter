@@ -45,5 +45,8 @@
       "--loader=ts-node/esm",
       "--experimental-specifier-resolution=node"
     ]
+  },
+  "dependencies": {
+    "moo": "^0.5.1"
   }
 }
