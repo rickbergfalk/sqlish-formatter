@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "description": "A sql-ish formatter",
   "type": "module",
-  "source": "src/sqlish-formatter.js",
+  "source": "src/sqlish-formatter.ts",
   "exports": {
     "require": "./dist/sqlish-formatter.cjs",
     "default": "./dist/sqlish-formatter.modern.js"
@@ -11,6 +11,7 @@
   "main": "./dist/sqlish-formatter.cjs",
   "module": "./dist/sqlish-formatter.module.js",
   "unpkg": "./dist/sqlish-formatter.umd.js",
+  "types": "dist/sqlish-formatter.d.ts",
   "scripts": {
     "build": "microbundle",
     "dev": "microbundle watch"
