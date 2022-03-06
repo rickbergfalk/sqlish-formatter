@@ -14,7 +14,8 @@
   "types": "dist/sqlish-formatter.d.ts",
   "scripts": {
     "build": "microbundle",
-    "dev": "microbundle watch"
+    "dev": "microbundle watch",
+    "test": "ava"
   },
   "repository": {
     "type": "git",
@@ -31,6 +32,18 @@
   },
   "homepage": "https://github.com/rickbergfalk/sqlish-formatter#readme",
   "devDependencies": {
-    "microbundle": "^0.14.2"
+    "ava": "^4.1.0",
+    "microbundle": "^0.14.2",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.2"
+  },
+  "ava": {
+    "extensions": {
+      "ts": "module"
+    },
+    "nodeArguments": [
+      "--loader=ts-node/esm",
+      "--experimental-specifier-resolution=node"
+    ]
   }
 }
