@@ -11,5 +11,5 @@ import { format } from "./sqlish-formatter";
 // });
 
 test("format", (t) => {
-  t.is(format("select table inner JOIN "), "hello world");
+  t.is(format("select 1, 2, 3 from sometable inner JOIN "), "hello world");
 });
