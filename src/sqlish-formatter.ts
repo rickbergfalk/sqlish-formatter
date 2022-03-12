@@ -1,4 +1,10 @@
-// Just a basic function to get infra set up
+import { lexer } from "./keywords";
+
 export function format(sql: string) {
-  return `hello ${sql}`;
+  lexer.reset(sql);
+
+  let tokens = Array.from(lexer);
+  console.log(tokens);
+
+  return `hello world`;
 }
