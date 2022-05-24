@@ -13,6 +13,6 @@ import { format } from "./sqlish-formatter";
 test("format", (t) => {
   t.is(
     format("select 1, 2, 3 from sometable inner JOIN "),
-    "select\n\t1,\n\t2,\n\t3\nfrom\n\tsometable inner JOIN"
+    "select\n\t1,\n\t2,\n\t3\nfrom\n\tsometable\n\tinner JOIN"
   );
 });
