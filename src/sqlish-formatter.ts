@@ -1,4 +1,9 @@
-import { lexer } from "./keywords";
+import {
+  lexer,
+  topLevelWords,
+  topLevelWordsNoIndent,
+  newlineWords,
+} from "./keywords";
 
 enum Types {
   comma = "comma",
@@ -16,84 +21,113 @@ enum Types {
   whitespace = "whitespace",
 }
 
-const compounds = [["inner", "join"]];
+// Array of arrays of compound keywords like
+// [["inner", "join"]];
+const compounds = [...topLevelWords, ...topLevelWordsNoIndent, ...newlineWords]
+  .map((words) => words.split(" "))
+  .filter((words) => words.length > 1);
 
 export function format(sql: string) {
   lexer.reset(sql);
 
-  let tokens: moo.Token[] = Array.from(lexer);
+  let prevToken: moo.Token | undefined = undefined;
+  let token: moo.Token | undefined = lexer.next();
+  let nextToken: moo.Token | undefined = lexer.next();
+
+  // TODO - new algorithm goal
+  // Print everything as is, but when whitespace occurs, print the necessary whitespace
+  // This will require having lookbackward/forward references
+  function next() {
+    prevToken = token;
+    token = nextToken;
+    nextToken = lexer.next();
+    // advance until next token is non-whitespace
+    while (nextToken?.type === Types.whitespace) {
+      nextToken = lexer.next();
+    }
+  }
 
   let output = "";
   let indent = 1;
-  let inCompound: string[] | undefined = undefined;
 
   function getIndent() {
-    return "  ".repeat(indent);
+    return "\t".repeat(indent);
   }
 
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
+  // TODO algorithm
+  // How whitespace is managed depends on preceding and following nodes
+  // for example, sometimes new lines are determined because of a prior keyword, or comma
+  // `SELECT` requires a new line and indentation
+  // Other times can require knowing what follows something. JOINs for example require a  new line prior
+  //
+  // ```
+  // FROM
+  //   sometable s
+  //   JOIN another_table AS at ON
+  // ```
+  //
+  // Ultimately we have indicators where we need to capture newLine after or newline prior
+  // And each time we add a newline, we need to flag whether it needs an indent or not
 
+  while (token) {
+    // We manage own whitespace
     if (token.type === Types.whitespace) {
-      output += " ";
+      if (prevToken.type === Types.whitespace) {
+        continue;
+      }
+
+      next();
       continue;
     }
 
+    console.log(token.text);
+
     if (token.type === Types.keyword) {
-      // If keyword is *potentially* part of compound keyword, handle it special
-      const compound = compounds.find(
-        (compound) => compound[0] === token.value
-      );
-      if (compound) {
-        inCompound = compound;
+      const val = token.value;
+
+      if (topLevelWordsNoIndent.includes(val)) {
         indent--;
         output += "\n";
         output += token.text;
+        next();
         continue;
       }
 
-      if (!inCompound) {
+      if (topLevelWords.includes(val)) {
         indent--;
         output += "\n";
-        output += token.text + "\n";
-        indent++;
-        output += getIndent();
-        continue;
-      }
-
-      // Current token is not the start of a compound, but we're potentially in one.
-      // If token is whitespace or exists in compound we're potentially in, stay in the compound
-      // Otherwise we've broken free and can do the usually keyword thing
-      if (inCompound.includes(token.value)) {
         output += token.text;
-        // If last token in compound, unflag
-        if (inCompound[inCompound.length - 1] === token.text) {
-          inCompound = undefined;
-          output += "\n";
-          indent++;
-          output += getIndent();
-        }
-        continue;
-      } else {
-        // Out of compound. start a new line
-        inCompound = undefined;
+        // We don't know if we can indent the next block. This might be a compound top-level
         output += "\n";
         indent++;
         output += getIndent();
-        output += token.text;
+        next();
         continue;
       }
+
+      if (newlineWords.includes(val)) {
+        output += "\n";
+        output += token.text;
+        next();
+        continue;
+      }
+
+      output += " " + token.text;
     }
 
     if (token.type === Types.comma) {
       output += token.text + "\n" + getIndent();
+      next();
       continue;
     }
 
-    output += token.text;
+    output += " " + token.text;
+    next();
   }
 
-  console.log(output);
+  console.log("\n-----");
+  console.log(output.trim());
+  console.log("\n-----");
 
-  return `hello world`;
+  return output.trim();
 }
