@@ -31,12 +31,17 @@ export function format(sql: string) {
   lexer.reset(sql);
 
   let prevToken: moo.Token | undefined = undefined;
-  let token: moo.Token | undefined = lexer.next();
-  let nextToken: moo.Token | undefined = lexer.next();
+  let token: moo.Token | undefined = undefined;
+  let nextToken: moo.Token | undefined = undefined;
 
-  // TODO - new algorithm goal
-  // Print everything as is, but when whitespace occurs, print the necessary whitespace
-  // This will require having lookbackward/forward references
+  // New algo goal:
+  // Strip all whitespace. This library owns whitespace and changes nothing else.
+  // Print the tokens, and in between print necessary whitespace.
+  // This will require having lookbackward/forward references.
+
+  // This function owns advancing the tokens.
+  // It tracks the prev and next tokens, and does helpful thing like stripping whitespace
+  // Eventually it should combine compound words too
   function next() {
     prevToken = token;
     token = nextToken;
@@ -46,6 +51,11 @@ export function format(sql: string) {
       nextToken = lexer.next();
     }
   }
+
+  // Bootstrap the prevToken, token, and nextToken variables
+  // This is called twiced because first time token will be nextToken which is undefined.
+  next();
+  next();
 
   let output = "";
   let indent = 1;
@@ -70,14 +80,9 @@ export function format(sql: string) {
   // And each time we add a newline, we need to flag whether it needs an indent or not
 
   while (token) {
-    // We manage own whitespace
+    // We should never have whitespace here. It should be filtered out with our next function
     if (token.type === Types.whitespace) {
-      if (prevToken.type === Types.whitespace) {
-        continue;
-      }
-
-      next();
-      continue;
+      throw new Error("Unexpected whitespace");
     }
 
     console.log(token.text);
@@ -113,6 +118,8 @@ export function format(sql: string) {
       }
 
       output += " " + token.text;
+      next();
+      continue;
     }
 
     if (token.type === Types.comma) {
@@ -121,7 +128,7 @@ export function format(sql: string) {
       continue;
     }
 
-    output += " " + token.text;
+    output += token.text;
     next();
   }
 
