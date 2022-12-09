@@ -157,7 +157,18 @@ export function format(sql: string) {
       continue;
     }
 
-    output += token.text;
+    if (token.type === Types.period) {
+      output += token.text;
+      next();
+      continue;
+    }
+
+    if (output.endsWith(" ") || output.endsWith("\t") || output.endsWith(".")) {
+      output += token.text;
+    } else {
+      output += " " + token.text;
+    }
+
     next();
   }
 

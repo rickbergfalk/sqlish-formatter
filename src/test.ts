@@ -1,18 +1,17 @@
 import test from "ava";
+import { readdirSync, readFileSync } from "fs";
 import { format } from "./sqlish-formatter";
 
-// test("foo", (t) => {
-//   t.pass();
-// });
+const r = readdirSync("./src/tests");
 
-// test("bar", async (t) => {
-//   const bar = Promise.resolve("bar");
-//   t.is(await bar, "bar");
-// });
+function getTestParts(str: string) {
+  return str.split("\n~~~\n");
+}
 
-test("format", (t) => {
-  t.is(
-    format("select 1, 2, 3 from sometable inner JOIN "),
-    "select\n\t1,\n\t2,\n\t3\nfrom\n\tsometable\n\tinner JOIN"
-  );
+r.filter((filename) => filename.endsWith(".sql")).forEach((filename) => {
+  const basic = readFileSync(`./src/tests/${filename}`, "utf8");
+  const [original, expected] = getTestParts(basic);
+  test(filename, (t) => {
+    t.is(format(original), expected);
+  });
 });
