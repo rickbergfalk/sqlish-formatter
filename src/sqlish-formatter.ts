@@ -27,6 +27,20 @@ const compounds = [...topLevelWords, ...topLevelWordsNoIndent, ...newlineWords]
   .map((words) => words.split(" "))
   .filter((words) => words.length > 1);
 
+// then with the compounds make a tree
+// { first: { second1: { third: {} } }, second2: {} } }
+const compoundMap: Record<string, any> = {};
+compounds.forEach((compound) => {
+  let objToAssign = compoundMap;
+  compound.forEach((word) => {
+    if (!objToAssign[word]) {
+      objToAssign[word] = {};
+    }
+    objToAssign = objToAssign[word];
+  });
+});
+// console.log(JSON.stringify(compoundMap, null, 2));
+
 export function format(sql: string) {
   lexer.reset(sql);
 
@@ -39,16 +53,32 @@ export function format(sql: string) {
   // Print the tokens, and in between print necessary whitespace.
   // This will require having lookbackward/forward references.
 
+  function getNextNonWhiteToken() {
+    let t = lexer.next();
+    // advance until next token is non-whitespace
+    while (t?.type === Types.whitespace) {
+      t = lexer.next();
+    }
+    return t;
+  }
+
   // This function owns advancing the tokens.
   // It tracks the prev and next tokens, and does helpful thing like stripping whitespace
   // Eventually it should combine compound words too
   function next() {
     prevToken = token;
     token = nextToken;
-    nextToken = lexer.next();
-    // advance until next token is non-whitespace
-    while (nextToken?.type === Types.whitespace) {
-      nextToken = lexer.next();
+    nextToken = getNextNonWhiteToken();
+
+    // if token is part of a compound...
+    let isCompound = false;
+    let compoundLayer = compoundMap;
+    if (compoundLayer?.[token?.value]?.[nextToken?.value]) {
+      isCompound = true;
+      compoundLayer = compoundLayer?.[token?.value];
+      token.value = `${token.value} ${nextToken.value}`;
+      token.text = `${token.text} ${nextToken.text}`;
+      nextToken = getNextNonWhiteToken();
     }
   }
 
@@ -85,8 +115,6 @@ export function format(sql: string) {
       throw new Error("Unexpected whitespace");
     }
 
-    console.log(token.text);
-
     if (token.type === Types.keyword) {
       const val = token.value;
 
@@ -112,6 +140,7 @@ export function format(sql: string) {
 
       if (newlineWords.includes(val)) {
         output += "\n";
+        output += getIndent();
         output += token.text;
         next();
         continue;
@@ -132,9 +161,7 @@ export function format(sql: string) {
     next();
   }
 
-  console.log("\n-----");
-  console.log(output.trim());
-  console.log("\n-----");
+  // console.log(`\n-----\n${output.trim()}\n-----`);
 
   return output.trim();
 }
