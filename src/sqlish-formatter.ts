@@ -27,19 +27,45 @@ const compounds = [...topLevelWords, ...topLevelWordsNoIndent, ...newlineWords]
   .map((words) => words.split(" "))
   .filter((words) => words.length > 1);
 
-// then with the compounds make a tree
-// { first: { second1: { third: {} } }, second2: {} } }
-const compoundMap: Record<string, any> = {};
+// then with the compounds make an index
+// { one: { two: true }, 'one two': { three: true } }
+type CompoundIndex = Record<string, Record<string, boolean>>;
+const compoundIndex: CompoundIndex = {};
 compounds.forEach((compound) => {
-  let objToAssign = compoundMap;
+  let runningCompound = "";
   compound.forEach((word) => {
-    if (!objToAssign[word]) {
-      objToAssign[word] = {};
+    if (!runningCompound) {
+      // If there is no running compound set we're on the first word
+      // set running compound and create an empty object
+      runningCompound = word;
+      compoundIndex[runningCompound] = {};
+    } else {
+      compoundIndex[runningCompound][word] = true;
+      runningCompound = runningCompound + " " + word;
+      compoundIndex[runningCompound] = {};
     }
-    objToAssign = objToAssign[word];
   });
 });
 // console.log(JSON.stringify(compoundMap, null, 2));
+
+/**
+ * Find out if token is part of a compound token
+ * A compound token has multiple keywords like LEFT OUTER JOIN.
+ * In this case, ` OUTER` would get appended to `LEFT`, and then ` JOIN` appended to `LEFT OUTER`
+ */
+function mergeCompounds(
+  compoundLayer: CompoundIndex,
+  token: moo.Token,
+  nextToken: moo.Token,
+  nextFn: () => moo.Token
+) {
+  if (compoundLayer?.[token?.value]?.[nextToken?.value]) {
+    token.value = `${token.value} ${nextToken.value}`;
+    token.text = `${token.text} ${nextToken.text}`;
+    return mergeCompounds(compoundLayer, token, nextFn(), nextFn);
+  }
+  return { token, nextToken };
+}
 
 export function format(sql: string) {
   lexer.reset(sql);
@@ -53,7 +79,7 @@ export function format(sql: string) {
   // Print the tokens, and in between print necessary whitespace.
   // This will require having lookbackward/forward references.
 
-  function getNextNonWhiteToken() {
+  function getNextNonWhiteToken(): moo.Token {
     let t = lexer.next();
     // advance until next token is non-whitespace
     while (t?.type === Types.whitespace) {
@@ -62,24 +88,19 @@ export function format(sql: string) {
     return t;
   }
 
-  // This function owns advancing the tokens.
-  // It tracks the prev and next tokens, and does helpful thing like stripping whitespace
-  // Eventually it should combine compound words too
   function next() {
     prevToken = token;
     token = nextToken;
     nextToken = getNextNonWhiteToken();
 
-    // if token is part of a compound...
-    let isCompound = false;
-    let compoundLayer = compoundMap;
-    if (compoundLayer?.[token?.value]?.[nextToken?.value]) {
-      isCompound = true;
-      compoundLayer = compoundLayer?.[token?.value];
-      token.value = `${token.value} ${nextToken.value}`;
-      token.text = `${token.text} ${nextToken.text}`;
-      nextToken = getNextNonWhiteToken();
-    }
+    const merged = mergeCompounds(
+      compoundIndex,
+      token,
+      nextToken,
+      getNextNonWhiteToken
+    );
+    token = merged.token;
+    nextToken = merged.nextToken;
   }
 
   // Bootstrap the prevToken, token, and nextToken variables
