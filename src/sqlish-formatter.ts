@@ -136,6 +136,10 @@ export function format(sql: string) {
       throw new Error("Unexpected whitespace");
     }
 
+    // TODO - instead of mixing whether tokens print whitespace before or after the token
+    // maybe keep it consistent with each token getting appended with some whitespace
+    // This requires looking back at previous token to figure what kind of whitespace to append (if any)
+    // This makes writing consistent. It is always (maybe whitespace + token) and nothing else.
     if (token.type === Types.keyword) {
       const val = token.value;
 
