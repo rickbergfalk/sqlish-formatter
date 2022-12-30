@@ -136,64 +136,41 @@ export function format(sql: string) {
       throw new Error("Unexpected whitespace");
     }
 
-    // TODO - instead of mixing whether tokens print whitespace before or after the token
-    // maybe keep it consistent with each token getting appended with some whitespace
-    // This requires looking back at previous token to figure what kind of whitespace to append (if any)
+    // Latest approach - instead of mixing whether tokens print whitespace before or after the token
+    // keep it consistent with each token getting appended to some whitespace
+    // This sometimes requires looking back at previous token to figure what kind of whitespace to append if any.
     // This makes writing consistent. It is always (maybe whitespace + token) and nothing else.
-    if (token.type === Types.keyword) {
-      const val = token.value;
-
-      if (topLevelWordsNoIndent.includes(val)) {
-        indent--;
-        output += "\n";
-        output += token.text;
-        next();
-        continue;
-      }
-
-      if (topLevelWords.includes(val)) {
-        indent--;
-        output += "\n";
-        output += token.text;
-        // We don't know if we can indent the next block. This might be a compound top-level
-        output += "\n";
-        indent++;
-        output += getIndent();
-        next();
-        continue;
-      }
-
-      if (newlineWords.includes(val)) {
-        output += "\n";
-        output += getIndent();
-        output += token.text;
-        next();
-        continue;
-      }
-
-      output += " " + token.text;
-      next();
-      continue;
-    }
-
-    if (token.type === Types.comma) {
-      output += token.text + "\n" + getIndent();
-      next();
-      continue;
-    }
-
-    if (token.type === Types.period) {
-      output += token.text;
-      next();
-      continue;
-    }
-
-    if (output.endsWith(" ") || output.endsWith("\t") || output.endsWith(".")) {
-      output += token.text;
+    const val = token.value;
+    if (token.type === Types.keyword && topLevelWordsNoIndent.includes(val)) {
+      indent--;
+      output += "\n";
+    } else if (token.type === Types.keyword && topLevelWords.includes(val)) {
+      indent--;
+      output += "\n";
+    } else if (token.type === Types.keyword && newlineWords.includes(val)) {
+      output += "\n";
+      output += getIndent();
+    } else if (topLevelWords.includes(prevToken.value)) {
+      output += "\n";
+      indent++;
+      output += getIndent();
+    } else if (prevToken.type === Types.comma) {
+      output += "\n" + getIndent();
+    } else if (
+      token.type === Types.period ||
+      prevToken.type === Types.period ||
+      token.type === Types.comma ||
+      token.type === Types.lparen ||
+      token.type === Types.rparen ||
+      prevToken.type === Types.lparen
+    ) {
+      // noop - these conditions get no spaces
     } else {
-      output += " " + token.text;
+      output += " ";
     }
 
+    // Now print the token
+    output += token.text;
     next();
   }
 
