@@ -109,10 +109,10 @@ export function format(sql: string) {
   next();
 
   let output = "";
-  let indent = 1;
+  let indent = 0;
 
   function getIndent() {
-    return "\t".repeat(indent);
+    return indent > 0 ? "\t".repeat(indent) : "";
   }
 
   // TODO algorithm
@@ -142,11 +142,16 @@ export function format(sql: string) {
     // This makes writing consistent. It is always (maybe whitespace + token) and nothing else.
     const val = token.value;
     if (token.type === Types.keyword && topLevelWordsNoIndent.includes(val)) {
-      indent--;
+      if (indent > 0) {
+        indent--;
+      }
       output += "\n";
     } else if (token.type === Types.keyword && topLevelWords.includes(val)) {
-      indent--;
+      if (indent > 0) {
+        indent--;
+      }
       output += "\n";
+      output += getIndent();
     } else if (token.type === Types.keyword && newlineWords.includes(val)) {
       output += "\n";
       output += getIndent();
@@ -160,11 +165,20 @@ export function format(sql: string) {
       token.type === Types.period ||
       prevToken.type === Types.period ||
       token.type === Types.comma ||
-      token.type === Types.lparen ||
-      token.type === Types.rparen ||
       prevToken.type === Types.lparen
     ) {
       // noop - these conditions get no spaces
+    } else if (token.type === Types.lparen) {
+      indent++;
+      if (
+        prevToken.type === Types.keyword &&
+        nextToken.type === Types.keyword
+      ) {
+        output += " ";
+      }
+    } else if (token.type === Types.rparen) {
+      // TODO FIXME XXX - no way to know if this is closing function paren or what
+      indent--;
     } else {
       output += " ";
     }
