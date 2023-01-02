@@ -5,6 +5,10 @@ import {
   newlineWords,
 } from "./keywords";
 
+interface Token extends moo.Token {
+  spaceBefore: boolean;
+}
+
 enum Types {
   comma = "comma",
   comment = "comment",
@@ -46,7 +50,6 @@ compounds.forEach((compound) => {
     }
   });
 });
-// console.log(JSON.stringify(compoundMap, null, 2));
 
 /**
  * Find out if token is part of a compound token
@@ -55,9 +58,9 @@ compounds.forEach((compound) => {
  */
 function mergeCompounds(
   compoundLayer: CompoundIndex,
-  token: moo.Token,
-  nextToken: moo.Token,
-  nextFn: () => moo.Token
+  token: Token,
+  nextToken: Token,
+  nextFn: () => Token
 ) {
   if (compoundLayer?.[token?.value]?.[nextToken?.value]) {
     token.value = `${token.value} ${nextToken.value}`;
@@ -70,20 +73,30 @@ function mergeCompounds(
 export function format(sql: string) {
   lexer.reset(sql);
 
-  let prevToken: moo.Token | undefined = undefined;
-  let token: moo.Token | undefined = undefined;
-  let nextToken: moo.Token | undefined = undefined;
+  let prevToken: Token | undefined = undefined;
+  let token: Token | undefined = undefined;
+  let nextToken: Token | undefined = undefined;
 
-  // New algo goal:
-  // Strip all whitespace. This library owns whitespace and changes nothing else.
-  // Print the tokens, and in between print necessary whitespace.
-  // This will require having lookbackward/forward references.
+  let output = "";
+  let indent = 0;
+  const parens: Array<"function" | "expression"> = [];
 
-  function getNextNonWhiteToken(): moo.Token {
-    let t = lexer.next();
+  function getIndent() {
+    return indent > 0 ? "\t".repeat(indent) : "";
+  }
+
+  function getNextNonWhiteToken(): Token {
+    let t: Token | undefined = lexer.next();
+    if (t) {
+      t.spaceBefore = false;
+    }
+
     // advance until next token is non-whitespace
     while (t?.type === Types.whitespace) {
       t = lexer.next();
+      if (t) {
+        t.spaceBefore = true;
+      }
     }
     return t;
   }
@@ -108,32 +121,15 @@ export function format(sql: string) {
   next();
   next();
 
-  let output = "";
-  let indent = 0;
-
-  function getIndent() {
-    return indent > 0 ? "\t".repeat(indent) : "";
-  }
-
-  // TODO algorithm
-  // How whitespace is managed depends on preceding and following nodes
-  // for example, sometimes new lines are determined because of a prior keyword, or comma
-  // `SELECT` requires a new line and indentation
-  // Other times can require knowing what follows something. JOINs for example require a  new line prior
-  //
-  // ```
-  // FROM
-  //   sometable s
-  //   JOIN another_table AS at ON
-  // ```
-  //
-  // Ultimately we have indicators where we need to capture newLine after or newline prior
-  // And each time we add a newline, we need to flag whether it needs an indent or not
-
   while (token) {
     // We should never have whitespace here. It should be filtered out with our next function
     if (token.type === Types.whitespace) {
       throw new Error("Unexpected whitespace");
+    }
+
+    // Capture what kind of paren we're entering into
+    if (token.type === Types.lparen) {
+      parens.push(token.spaceBefore ? "expression" : "function");
     }
 
     // Latest approach - instead of mixing whether tokens print whitespace before or after the token
@@ -170,14 +166,16 @@ export function format(sql: string) {
       // noop - these conditions get no spaces
     } else if (token.type === Types.lparen) {
       indent++;
-      if (
-        prevToken.type === Types.keyword &&
-        nextToken.type === Types.keyword
-      ) {
+      if (token.spaceBefore) {
         output += " ";
       }
     } else if (token.type === Types.rparen) {
+      const parenType = parens.pop();
+      if (parenType === "expression") {
+        output += " ";
+      }
       // TODO FIXME XXX - no way to know if this is closing function paren or what
+      // we need statements, clauses, and expressions. See README
       indent--;
     } else {
       output += " ";
@@ -187,8 +185,6 @@ export function format(sql: string) {
     output += token.text;
     next();
   }
-
-  // console.log(`\n-----\n${output.trim()}\n-----`);
 
   return output.trim();
 }

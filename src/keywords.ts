@@ -1,4 +1,4 @@
-// @ts-expect-error
+// @ts-expect-error no default export
 import moo from "moo";
 
 export const keywords = [
