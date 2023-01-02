@@ -1,9 +1,5 @@
-import {
-  lexer,
-  topLevelWords,
-  topLevelWordsNoIndent,
-  newlineWords,
-} from "./keywords";
+import { topLevelWords, topLevelWordsNoIndent, newlineWords } from "./keywords";
+import { lexer } from "./lexer";
 
 interface Token extends moo.Token {
   spaceBefore: boolean;

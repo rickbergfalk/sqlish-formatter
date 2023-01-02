@@ -1,6 +1,6 @@
 import test from "ava";
 import { readdirSync, readFileSync } from "fs";
-import { format } from "./sqlish-formatter";
+import { format } from "./format";
 
 const r = readdirSync("./src/tests");
 
